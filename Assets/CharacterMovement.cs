@@ -5,26 +5,42 @@ using UnityEngine;
 [RequireComponent(typeof(Animator))]
 public class CharacterMovement : MonoBehaviour
 {
-    [Header("Movement")]
     public float moveSpeed = 5f;
-
     private Rigidbody rb;
     private Animator animator;
     private Vector3 movement;
 
-    [Header("Pickup Settings")]
     public KeyCode pickupKey = KeyCode.E;
-    private GameObject nearbyItem;
+    public KeyCode placeKey = KeyCode.R;
+
+    // The item currently in range to pick up
+    private ClothingItem nearbyClothingItem;
+
+    // Mannequin reference (when in range)
+    private GameObject nearbyMannequin;
+
+    // Track picked-up items by their IDs
     public List<string> pickedUpItems = new List<string>();
 
-    [Header("Held Cloth Object")]
+    // Optional cloth object in the player's hands
     public GameObject clothObject;
+
+    // This maps an item ID to a mannequin mesh GameObject.
+    // Assign these in the Inspector, matching IDs to the mannequin's disabled clothes meshes.
+    [System.Serializable]
+    public class MannequinClothes
+    {
+        public string itemID;
+        public GameObject mannequinMesh;
+    }
+    public MannequinClothes[] mannequinClothes;
 
     void Start()
     {
         rb = GetComponent<Rigidbody>();
         animator = GetComponent<Animator>();
         rb.freezeRotation = true;
+
         if (clothObject) clothObject.SetActive(false);
     }
 
@@ -32,19 +48,29 @@ public class CharacterMovement : MonoBehaviour
     {
         ProcessInput();
         AnimateMovement();
-        if (nearbyItem != null && Input.GetKeyDown(pickupKey))
+
+        // Pickup logic
+        if (nearbyClothingItem != null && Input.GetKeyDown(pickupKey))
         {
-            PickUpItem(nearbyItem);
+            PickUpClothing(nearbyClothingItem);
         }
-        if (animator != null)
+
+        // Placing items on mannequin
+        if (nearbyMannequin != null && Input.GetKeyDown(placeKey))
         {
-            bool isCarryingItem = pickedUpItems.Count > 0;
-            animator.SetBool("IsCarryingItem", isCarryingItem);
-            if (clothObject) clothObject.SetActive(isCarryingItem);
+            PlaceClothesOnMannequin();
+        }
+
+        // Update "IsCarryingItem" parameter and cloth object
+        if (animator)
+        {
+            bool isCarrying = (pickedUpItems.Count > 0);
+            animator.SetBool("IsCarryingItem", isCarrying);
+            if (clothObject) clothObject.SetActive(isCarrying);
         }
     }
 
-    private void FixedUpdate()
+    void FixedUpdate()
     {
         MovePlayer();
     }
@@ -62,6 +88,7 @@ public class CharacterMovement : MonoBehaviour
         {
             Vector3 targetPosition = rb.position + movement * moveSpeed * Time.fixedDeltaTime;
             rb.MovePosition(targetPosition);
+
             Quaternion targetRotation = Quaternion.LookRotation(movement) * Quaternion.Euler(0, 180, 0);
             rb.MoveRotation(Quaternion.Lerp(transform.rotation, targetRotation, 0.2f));
         }
@@ -69,36 +96,68 @@ public class CharacterMovement : MonoBehaviour
 
     void AnimateMovement()
     {
-        if (animator != null)
-        {
-            bool isMoving = movement.magnitude > 0f;
-            animator.SetBool("IsMoving", isMoving);
-            animator.SetFloat("VelocityX", movement.x);
-            animator.SetFloat("VelocityZ", movement.z);
-        }
+        if (!animator) return;
+        bool isMoving = (movement.magnitude > 0f);
+        animator.SetBool("IsMoving", isMoving);
+        animator.SetFloat("VelocityX", movement.x);
+        animator.SetFloat("VelocityZ", movement.z);
     }
 
+    // Detect clothing or mannequin
     private void OnTriggerEnter(Collider other)
     {
-        if (other.CompareTag("ClothingItem"))
+        // Check if it's clothing
+        ClothingItem item = other.GetComponent<ClothingItem>();
+        if (item != null)
         {
-            nearbyItem = other.gameObject;
+            nearbyClothingItem = item;
+            return;
+        }
+
+        // Check if it's the mannequin (by tag or a "Mannequin" script)
+        if (other.CompareTag("Mannequin"))
+        {
+            nearbyMannequin = other.gameObject;
         }
     }
 
     private void OnTriggerExit(Collider other)
     {
-        if (other.gameObject == nearbyItem)
+        if (nearbyClothingItem != null && other.gameObject == nearbyClothingItem.gameObject)
         {
-            nearbyItem = null;
+            nearbyClothingItem = null;
+        }
+
+        if (nearbyMannequin != null && other.gameObject == nearbyMannequin)
+        {
+            nearbyMannequin = null;
         }
     }
 
-    private void PickUpItem(GameObject itemObject)
+    void PickUpClothing(ClothingItem item)
     {
-        string itemID = itemObject.name;
-        pickedUpItems.Add(itemID);
-        itemObject.SetActive(false);
-        nearbyItem = null;
+        if (!pickedUpItems.Contains(item.itemID))
+        {
+            pickedUpItems.Add(item.itemID);
+            item.gameObject.SetActive(false);
+        }
+        nearbyClothingItem = null;
+    }
+
+    void PlaceClothesOnMannequin()
+    {
+        // For each item ID the player has, see if there's a matching mannequin mesh to enable
+        foreach (var id in pickedUpItems)
+        {
+            foreach (var mc in mannequinClothes)
+            {
+                if (mc.itemID == id && mc.mannequinMesh != null)
+                {
+                    mc.mannequinMesh.SetActive(true);
+                }
+            }
+        }
+        // Optionally: if you want to clear the items from the player's inventory:
+        // pickedUpItems.Clear();
     }
 }
