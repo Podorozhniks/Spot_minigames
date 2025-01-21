@@ -6,15 +6,9 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
-    path: Assets/Scenes/Player model changer.unity
-    guid: 21527a8b6246ac44d9b2d153cb915e88
+    path: Assets/Scenes/DressUpGameFinal.unity
+    guid: 9fc0d4010bbf28b4594072e72b8655ab
   - enabled: 1
     path: Assets/Scenes/MinigameHub.unity
     guid: 3c542959cf400ee4ca170ca92939dc6e
-  - enabled: 1
-    path: Assets/Scenes/SampleScene.unity
-    guid: 9fc0d4010bbf28b4594072e72b8655ab
-  - enabled: 1
-    path: Assets/Scenes/Posing_Game_testing_scene.unity
-    guid: a74a28387cd2348478331870d68f4721
   m_configObjects: {}
