@@ -20,6 +20,9 @@ public class CharacterMovement : MonoBehaviour
     [Header("Held Cloth Object")]
     public GameObject clothObject;
 
+    //enables/disables movement 
+    private bool canMove = true;
+
     void Start()
     {
         rb = GetComponent<Rigidbody>();
@@ -30,8 +33,13 @@ public class CharacterMovement : MonoBehaviour
 
     void Update()
     {
-        ProcessInput();
-        AnimateMovement();
+        if (canMove)
+        {
+            ProcessInput();
+            AnimateMovement();
+        }
+
+        
         if (nearbyItem != null && Input.GetKeyDown(pickupKey))
         {
             PickUpItem(nearbyItem);
@@ -46,7 +54,10 @@ public class CharacterMovement : MonoBehaviour
 
     private void FixedUpdate()
     {
-        MovePlayer();
+        if (canMove)
+        {
+            MovePlayer();
+        }
     }
 
     void ProcessInput()
@@ -100,5 +111,11 @@ public class CharacterMovement : MonoBehaviour
         pickedUpItems.Add(itemID);
         itemObject.SetActive(false);
         nearbyItem = null;
+    }
+
+    //method to enable/disable movement 
+    public void EnableMovement(bool enable)
+    {
+        canMove = enable;
     }
 }
