@@ -135,12 +135,12 @@ public class DressUpManager : MonoBehaviour
         dummy7.gameObject.SetActive(false);
         clothes_on_dummy.SetActive(false);
 
-        //dummy8.gameObject.SetActive(true);
+        
         reactionSprite.gameObject.SetActive(true);
 
         yield return new WaitForSeconds(afterEndTime);
 
-        //SceneManager.LoadScene(hub);
+        SceneManager.LoadScene("MinigameHub");
     }
 
 
