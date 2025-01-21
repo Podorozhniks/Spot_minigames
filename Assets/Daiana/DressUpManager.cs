@@ -40,8 +40,8 @@ public class DressUpManager : MonoBehaviour
 
     //time the player must stand in the designated area to end the game
     public float endTime = 0f;
-    public float requiredTimeInEndArea = 10f;
-    public float afterEndTime = 10f;
+    public float requiredTimeInEndArea = 6f;
+    public float afterEndTime = 7f;
     private bool gamePlayEnded = false; //variable for when the game play has ended 
     private bool gameEnded = false; //variable for when the minigame is over 
 
@@ -78,7 +78,7 @@ public class DressUpManager : MonoBehaviour
 
         //start the intro aniamtions
         StartCoroutine(PlayIntroAnimations());
-
+        
         
     }
 
@@ -147,18 +147,26 @@ public class DressUpManager : MonoBehaviour
 
     void Update()
     {
+        // Skip tutorial-related logic if the tutorial is no longer active
+        if (isTutorialActive)
+        {
+            CheckTargetPoints();
+        }
+
         // Check for end area logic after the tutorial is done
-        if (!isTutorialActive && !gameEnded)
+        if (!isTutorialActive && !gameEnded && PlayerInEndArea())
         {
             EndAreaLogic();
         }
 
-        // Existing logic for checking target points
-        CheckTargetPoints();
+        
     }
 
     void CheckTargetPoints()
     {
+        // Ensure that location triggers only work during the tutorial
+        if (!isTutorialActive) return;
+
         //checks if player reaches target point 1
         if (!target1Reached && Vector3.Distance(player.transform.position, targetPoint1.position) <= targetProximity)
         {
@@ -246,10 +254,14 @@ public class DressUpManager : MonoBehaviour
         Point1.SetActive(false);
         Point2.SetActive(false);
 
+        
+
         //resets flags
         target1Reached = false;
         target2Reached = false;
 
         Debug.Log("Tutorial reset. Objects and states restored.");
     }
+
+    
 }
