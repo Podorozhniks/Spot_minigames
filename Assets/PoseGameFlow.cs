@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.SceneManagement; // For SceneManager.LoadScene
 
 /// <summary>
 /// A robust pose checker / minigame script that:
@@ -10,9 +11,10 @@ using UnityEngine.UI;
 /// 2) Loads/saves poses as JSON files.
 /// 3) Stores loaded poses in a Dictionary by a canonical name (trimmed + lowercase).
 /// 4) Provides a minigame workflow (sequence of required poses).
-/// 5) Displays a PNG (Sprite) for each required pose.
-/// 6) Normalizes by root translation (hip midpoint), orientation alignment (hip vector),
-///    and scale (matching hip width).
+/// 5) Displays a PNG (Sprite) for each required pose in one UI Image.
+/// 6) Uses root-orientation-scale normalization to check the user's pose.
+/// 7) After the final pose, shows a separate 'victoryUIImage' with a 'wellDoneSprite' for 'victoryDisplayTime' seconds,
+///    then loads a hub scene.
 /// </summary>
 public class PoseGameFlow : MonoBehaviour
 {
@@ -86,8 +88,26 @@ public class PoseGameFlow : MonoBehaviour
     public float defaultLandmarkTolerance = 0.15f;
 
     [Header("Minigame Settings")]
+    [Tooltip("List of poses the user must perform in order.")]
     public List<PoseGoal> poseGoals = new List<PoseGoal>();
+
+    [Header("Pose UI Image (for instructions)")]
+    [Tooltip("UI Image where we display each required pose.")]
     public Image poseUIImage;
+
+    [Header("Victory UI Image (separate)")]
+    [Tooltip("UI Image used ONLY to show the 'Well Done' or 'Good Job' sprite at the end.")]
+    public Image victoryUIImage;
+
+    [Tooltip("Sprite to display after the final pose is completed.")]
+    public Sprite wellDoneSprite;
+
+    [Tooltip("How many seconds to wait after showing the 'Well Done' sprite before loading the hub scene.")]
+    public float victoryDisplayTime = 20f;
+
+    [Header("Hub Scene Settings")]
+    [Tooltip("Scene to load once the user sees the 'Well Done' image for victoryDisplayTime seconds.")]
+    public string hubSceneName = "HubLevel";
 
     [Header("Game Flow")]
     public bool autoStartMinigame = true;
@@ -121,7 +141,7 @@ public class PoseGameFlow : MonoBehaviour
         if (!Directory.Exists(saveDirectory))
         {
             if (showDebugLogs) Debug.Log($"[PoseGameFlow] Creating saveDirectory at: {saveDirectory}");
-            Directory.CreateDirectory(saveDirectory);
+            System.IO.Directory.CreateDirectory(saveDirectory);
         }
 
         // Load any existing poses from disk
@@ -133,6 +153,12 @@ public class PoseGameFlow : MonoBehaviour
             {
                 Debug.Log($"   Key='{kvp.Key}' => poseName='{kvp.Value.poseName}' (tolerance={kvp.Value.tolerance:F2})");
             }
+        }
+
+        // Hide the victory image (if assigned) at the start
+        if (victoryUIImage != null)
+        {
+            victoryUIImage.gameObject.SetActive(false);
         }
 
         // Start minigame if requested
@@ -192,6 +218,7 @@ public class PoseGameFlow : MonoBehaviour
     {
         minigameActive = true;
         currentPoseIndex = 0;
+
         ShowCurrentPoseUI();
 
         if (showDebugLogs)
@@ -219,7 +246,20 @@ public class PoseGameFlow : MonoBehaviour
             minigameActive = false;
             if (showDebugLogs)
                 Debug.Log("[PoseGameFlow] All poses in the minigame sequence have been matched!");
-            // Fire an event or "win" logic here if desired.
+
+            // Show the separate "victoryUIImage" with "wellDoneSprite" for victoryDisplayTime, then load hub scene
+            if (victoryUIImage != null && wellDoneSprite != null)
+            {
+                victoryUIImage.gameObject.SetActive(true);
+                victoryUIImage.sprite = wellDoneSprite;
+            }
+            else
+            {
+                if (showDebugLogs)
+                    Debug.LogWarning("[PoseGameFlow] victoryUIImage or wellDoneSprite is not assigned!");
+            }
+
+            StartCoroutine(ShowVictoryThenLoad());
         }
         else
         {
@@ -245,6 +285,20 @@ public class PoseGameFlow : MonoBehaviour
                 Debug.Log($"[PoseGameFlow] Showing pose sprite for: '{poseGoals[currentPoseIndex].poseName}'.");
             }
         }
+    }
+
+    /// <summary>
+    /// Coroutine: show the 'well done' image for 'victoryDisplayTime' seconds, then load the hub scene.
+    /// </summary>
+    private System.Collections.IEnumerator ShowVictoryThenLoad()
+    {
+        // Wait for the desired time 
+        yield return new WaitForSeconds(victoryDisplayTime);
+
+        if (showDebugLogs)
+            Debug.Log($"[PoseGameFlow] {victoryDisplayTime:F1} seconds have elapsed. Loading hub scene: '{hubSceneName}'");
+
+        SceneManager.LoadScene(hubSceneName);
     }
 
     // -------------------------------------------------------------------------
@@ -573,3 +627,5 @@ public class PoseGameFlow : MonoBehaviour
         return rawName.Trim().ToLowerInvariant();
     }
 }
+
+

@@ -10,8 +10,13 @@ public class CharacterMovement : MonoBehaviour
     private Animator animator;
     private Vector3 movement;
 
-    public KeyCode pickupKey = KeyCode.E;
-    public KeyCode placeKey = KeyCode.R;
+    // Keyboard fallback
+    public KeyCode pickupKey = KeyCode.E;  // or 'X' on Xbox
+    public KeyCode placeKey = KeyCode.R;   // or 'RB' on Xbox
+
+    // Also check these joystick buttons:
+    private KeyCode pickupButtonGamepad = KeyCode.JoystickButton2;  // X on Xbox
+    private KeyCode placeButtonGamepad = KeyCode.JoystickButton5;   // RB on Xbox
 
     // The item currently in range to pick up
     private ClothingItem nearbyClothingItem;
@@ -49,14 +54,19 @@ public class CharacterMovement : MonoBehaviour
         ProcessInput();
         AnimateMovement();
 
+        // Check if pickup was pressed (keyboard E or gamepad X)
+        bool pickupPressed = Input.GetKeyDown(pickupKey) || Input.GetKeyDown(pickupButtonGamepad);
+        // Check if place was pressed (keyboard R or gamepad RB)
+        bool placePressed = Input.GetKeyDown(placeKey) || Input.GetKeyDown(placeButtonGamepad);
+
         // Pickup logic
-        if (nearbyClothingItem != null && Input.GetKeyDown(pickupKey))
+        if (nearbyClothingItem != null && pickupPressed)
         {
             PickUpClothing(nearbyClothingItem);
         }
 
         // Placing items on mannequin
-        if (nearbyMannequin != null && Input.GetKeyDown(placeKey))
+        if (nearbyMannequin != null && placePressed)
         {
             PlaceClothesOnMannequin();
         }
@@ -66,7 +76,9 @@ public class CharacterMovement : MonoBehaviour
         {
             bool isCarrying = (pickedUpItems.Count > 0);
             animator.SetBool("IsCarryingItem", isCarrying);
-            if (clothObject) clothObject.SetActive(isCarrying);
+
+            if (clothObject)
+                clothObject.SetActive(isCarrying);
         }
     }
 
@@ -77,8 +89,9 @@ public class CharacterMovement : MonoBehaviour
 
     void ProcessInput()
     {
-        float horizontal = Input.GetAxisRaw("Horizontal");
-        float vertical = Input.GetAxisRaw("Vertical");
+        // For legacy Input system, "Horizontal" and "Vertical" should be mapped to WASD + Left Stick
+        float horizontal = Input.GetAxis("Horizontal");
+        float vertical = Input.GetAxis("Vertical");
         movement = new Vector3(horizontal, 0f, vertical).normalized;
     }
 
@@ -89,6 +102,7 @@ public class CharacterMovement : MonoBehaviour
             Vector3 targetPosition = rb.position + movement * moveSpeed * Time.fixedDeltaTime;
             rb.MovePosition(targetPosition);
 
+            // Rotate to face movement direction, 180 offset if your model faces 'away' from +Z
             Quaternion targetRotation = Quaternion.LookRotation(movement) * Quaternion.Euler(0, 180, 0);
             rb.MoveRotation(Quaternion.Lerp(transform.rotation, targetRotation, 0.2f));
         }
@@ -157,7 +171,8 @@ public class CharacterMovement : MonoBehaviour
                 }
             }
         }
-        // Optionally: if you want to clear the items from the player's inventory:
+        // Optionally clear the items from the player's inventory if desired:
         // pickedUpItems.Clear();
     }
 }
+
